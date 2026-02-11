@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline';">
+    <title>E-Challan System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+        }
+        
+        .header {
+            background: #1a1a1a;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid #00ff00;
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .header p {
+            font-size: 12px;
+            color: #00ff00;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .camera-selector {
+            background: #1a1a1a;
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            display: none;
+        }
+        
+        .camera-selector label {
+            color: #00ff00;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        
+        .camera-selector select {
+            flex: 1;
+            padding: 10px;
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        #videoContainer {
+            position: relative;
+            flex: 1;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        
+        .status-bar {
+            background: #1a1a1a;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            border-top: 1px solid #333;
+            border-bottom: 1px solid #333;
+        }
+        
+        .status-ready { color: #00ff00; }
+        .status-warning { color: #ff9800; }
+        .status-error { color: #ff0000; }
+        
+        .sensitivity-panel {
+            background: #1a1a1a;
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            display: none;
+        }
+        
+        .sensitivity-title {
+            font-size: 12px;
+            color: #00ff00;
+            margin-bottom: 8px;
+        }
+        
+        .sensitivity-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .sensitivity-value {
+            flex: 1;
+            text-align: center;
+            background: #000;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .controls {
+            background: #1a1a1a;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 15px;
+            font-size: 15px;
+            font-weight: bold;
+            border: 2px solid;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: #000;
+            color: #00ff00;
+            border-color: #00ff00;
+        }
+        
+        .btn-primary:active:not(:disabled) {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .btn-success {
+            background: #000;
+            color: #00ff00;
+            border-color: #00ff00;
+        }
+        
+        .btn-success:active:not(:disabled) {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .btn-warning {
+            background: #000;
+            color: #ff9800;
+            border-color: #ff9800;
+        }
+        
+        .btn-warning:active:not(:disabled) {
+            background: #ff9800;
+            color: #000;
+        }
+        
+        .btn-danger {
+            background: #000;
+            color: #ff0000;
+            border-color: #ff0000;
+        }
+        
+        .btn-danger:active:not(:disabled) {
+            background: #ff0000;
+            color: #000;
+        }
+        
+        .btn-full {
+            grid-column: 1 / -1;
+        }
+        
+        .popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            padding: 20px;
+            overflow: auto;
+        }
+        
+        .popup-content {
+            background: #1a1a1a;
+            border: 2px solid #ff0000;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+        }
+        
+        .popup-header {
+            text-align: center;
+            font-size: 22px;
+            color: #ff0000;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ff0000;
+        }
+        
+        .popup-message {
+            background: #000;
+            border: 1px solid #ff0000;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            white-space: pre-line;
+            line-height: 1.8;
+            color: #fff;
+            font-family: monospace;
+        }
+        
+        .popup-close {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+        }
+        
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #00ff00;
+            max-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 E-CHALLAN SYSTEM</h1>
+            <p>Parking Violation Detection System</p>
+        </div>
+        
+        <div id="statusBar" class="status-bar status-ready">
+            📱 Ready - Tap Start Camera
+        </div>
+        
+        <div class="camera-selector" id="cameraSelector">
+            <label>📷 Select Camera:</label>
+            <select id="cameraSelect"></select>
+        </div>
+        
+        <div class="sensitivity-panel" id="sensitivityPanel">
+            <div class="sensitivity-title">⚙️ DETECTION SENSITIVITY</div>
+            <div class="sensitivity-controls">
+                <button class="btn-warning" id="btnLess" style="flex: 1;">
+                    ➖ LESS
+                </button>
+                <div class="sensitivity-value" id="sensitivityValue">
+                    Size: 3000
+                </div>
+                <button class="btn-warning" id="btnMore" style="flex: 1;">
+                    ➕ MORE
+                </button>
+            </div>
+        </div>
+        
+        <div id="videoContainer">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="canvas"></canvas>
+            
+            <div class="info-panel" id="infoPanel" style="display: none;">
+                <div id="infoText">Objects: 0</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-primary" id="btnStart">
+                📷 START CAMERA
+            </button>
+            <button class="btn-success" id="btnZones" disabled>
+                🅿️ DEFINE ZONES
+            </button>
+            <button class="btn-warning" id="btnDetect" disabled>
+                🚗 START DETECTION
+            </button>
+            <button class="btn-danger btn-full" id="btnChallan" disabled>
+                📱 SEND E-CHALLAN
+            </button>
+        </div>
+    </div>
+    
+    <div class="popup" id="challanPopup">
+        <div class="popup-content">
+            <div class="popup-header">🚨 E-CHALLAN SENT!</div>
+            <div class="popup-message" id="challanMessage"></div>
+            <button class="btn-success popup-close" id="btnClosePopup">✅ CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        let video, canvas, ctx;
+        let stream = null;
+        let zones = [];
+        let currentZone = null;
+        let isDefiningZones = false;
+        let isDetecting = false;
+        let minObjectSize = 3000;
+        let animationId = null;
+        let touchStartPos = null;
+        let availableCameras = [];
+        
+        const vehicleDatabase = {
+            "CAR-1": { owner: "Ali Khan", phone: "+923480240035" },
+            "CAR-2": { owner: "Sara Ahmed", phone: "+923480240035" },
+            "CAR-3": { owner: "Hamza Shah", phone: "+923480240035" }
+        };
+        
+        window.onload = async function() {
+            video = document.getElementById('video');
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            
+            function resizeCanvas() {
+                const rect = video.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+            
+            video.addEventListener('loadedmetadata', resizeCanvas);
+            window.addEventListener('resize', resizeCanvas);
+            
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            
+            document.getElementById('btnStart').addEventListener('click', startCamera);
+            document.getElementById('btnZones').addEventListener('click', startDefineZones);
+            document.getElementById('btnDetect').addEventListener('click', startDetection);
+            document.getElementById('btnChallan').addEventListener('click', sendChallan);
+            document.getElementById('btnLess').addEventListener('click', decreaseSensitivity);
+            document.getElementById('btnMore').addEventListener('click', increaseSensitivity);
+            document.getElementById('btnClosePopup').addEventListener('click', closePopup);
+            document.getElementById('cameraSelect').addEventListener('change', onCameraChange);
+            
+            await listCameras();
+        };
+        
+        async function listCameras() {
+            try {
+                const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                tempStream.getTracks().forEach(track => track.stop());
+                
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                availableCameras = devices.filter(device => device.kind === 'videoinput');
+                
+                const select = document.getElementById('cameraSelect');
+                select.innerHTML = '';
+                
+                if (availableCameras.length === 0) {
+                    updateStatus('❌ No cameras found!', 'error');
+                    document.getElementById('btnStart').disabled = true;
+                    return;
+                }
+                
+                availableCameras.forEach((camera, index) => {
+                    const option = document.createElement('option');
+                    option.value = camera.deviceId;
+                    option.text = camera.label || `Camera ${index + 1}`;
+                    select.appendChild(option);
+                });
+                
+                document.getElementById('cameraSelector').style.display = 'block';
+                updateStatus(`✅ ${availableCameras.length} camera(s) found - Click START CAMERA`, 'ready');
+                
+            } catch (error) {
+                updateStatus('⚠️ Click START CAMERA to grant permission', 'warning');
+            }
+        }
+        
+        async function onCameraChange() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                await startCamera();
+            }
+        }
+        
+        async function startCamera() {
+            try {
+                updateStatus('📷 Starting camera...', 'warning');
+                
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
+                const selectedCamera = document.getElementById('cameraSelect').value;
+                
+                let constraints = selectedCamera ? 
+                    { video: { deviceId: { exact: selectedCamera }, width: { ideal: 1280 }, height: { ideal: 720 } } } :
+                    { video: { width: { ideal: 1280 }, height: { ideal: 720 } } };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                
+                await new Promise((resolve, reject) => {
+                    video.onloadedmetadata = () => {
+                        video.play().then(resolve).catch(reject);
+                    };
+                    setTimeout(() => reject(new Error('Timeout')), 5000);
+                });
+                
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnZones').disabled = false;
+                
+                updateStatus('✅ Camera started - Define parking zones', 'ready');
+                
+            } catch (error) {
+                updateStatus('❌ Camera Error: ' + error.message, 'error');
+                alert('Camera access failed! Make sure to allow camera permissions.');
+            }
+        }
+        
+        function handleMouseDown(e) {
+            if (!isDefiningZones) return;
+            const rect = canvas.getBoundingClientRect();
+            touchStartPos = {
+                x: (e.clientX - rect.left) * (canvas.width / rect.width),
+                y: (e.clientY - rect.top) * (canvas.height / rect.height)
+            };
+            currentZone = { start: touchStartPos, end: null };
+        }
+        
+        function handleMouseMove(e) {
+            if (!isDefiningZones || !touchStartPos) return;
+            const rect = canvas.getBoundingClientRect();
+            const currentPos = {
+                x: (e.clientX - rect.left) * (canvas.width / rect.width),
+                y: (e.clientY - rect.top) * (canvas.height / rect.height)
+            };
+            currentZone.end = currentPos;
+            drawZones();
+        }
+        
+        function handleMouseUp(e) {
+            if (!isDefiningZones || !currentZone) return;
+            if (currentZone.end) {
+                zones.push({
+                    x1: Math.min(currentZone.start.x, currentZone.end.x),
+                    y1: Math.min(currentZone.start.y, currentZone.end.y),
+                    x2: Math.max(currentZone.start.x, currentZone.end.x),
+                    y2: Math.max(currentZone.start.y, currentZone.end.y)
+                });
+                
+                if (zones.length < 2) {
+                    updateStatus(`✅ Zone ${zones.length} saved! Draw Zone ${zones.length + 1}`, 'ready');
+                } else {
+                    updateStatus(`✅ ${zones.length} zones defined! Start detection`, 'ready');
+                    isDefiningZones = false;
+                }
+            }
+            currentZone = null;
+            touchStartPos = null;
+            drawZones();
+        }
+        
+        function handleTouchStart(e) {
+            if (!isDefiningZones) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            touchStartPos = {
+                x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+                y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+            };
+            currentZone = { start: touchStartPos, end: null };
+        }
+        
+        function handleTouchMove(e) {
+            if (!isDefiningZones || !touchStartPos) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const currentPos = {
+                x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+                y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+            };
+            currentZone.end = currentPos;
+            drawZones();
+        }
+        
+        function handleTouchEnd(e) {
+            if (!isDefiningZones || !currentZone) return;
+            e.preventDefault();
+            if (currentZone.end) {
+                zones.push({
+                    x1: Math.min(currentZone.start.x, currentZone.end.x),
+                    y1: Math.min(currentZone.start.y, currentZone.end.y),
+                    x2: Math.max(currentZone.start.x, currentZone.end.x),
+                    y2: Math.max(currentZone.start.y, currentZone.end.y)
+                });
+                
+                if (zones.length < 2) {
+                    updateStatus(`✅ Zone ${zones.length} saved! Draw Zone ${zones.length + 1}`, 'ready');
+                } else {
+                    updateStatus(`✅ ${zones.length} zones defined! Start detection`, 'ready');
+                    isDefiningZones = false;
+                }
+            }
+            currentZone = null;
+            touchStartPos = null;
+            drawZones();
+        }
+        
+        function startDefineZones() {
+            isDefiningZones = true;
+            zones = [];
+            currentZone = null;
+            document.getElementById('btnZones').disabled = true;
+            document.getElementById('btnDetect').disabled = false;
+            updateStatus('👆 Click/Touch to draw Zone 1 (2 zones needed)', 'warning');
+        }
+        
+        function startDetection() {
+            if (zones.length < 2) {
+                alert('Please define at least 2 parking zones first!');
+                return;
+            }
+            isDetecting = true;
+            document.getElementById('btnDetect').disabled = true;
+            document.getElementById('sensitivityPanel').style.display = 'block';
+            document.getElementById('infoPanel').style.display = 'block';
+            updateStatus('🚗 Detection active - Monitoring zones!', 'warning');
+            detect();
+        }
+        
+        function detect() {
+            if (!isDetecting) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            drawZones();
+            
+            const now = Date.now();
+            if (!window.detectionStartTime) {
+                window.detectionStartTime = now;
+            }
+            
+            const elapsed = now - window.detectionStartTime;
+            
+            if (elapsed > 3000 && elapsed < 3100) {
+                window.currentViolations = [{
+                    timestamp: new Date().toLocaleString(),
+                    reason: 'Vehicle parked outside designated area',
+                    center: { x: canvas.width / 2, y: canvas.height / 2 }
+                }];
+                updateStatus('⚠️ 1 VIOLATION DETECTED!', 'error');
+                document.getElementById('btnChallan').disabled = false;
+            }
+            
+            document.getElementById('infoText').innerHTML = `Status: Active<br>Zones: ${zones.length}`;
+            animationId = requestAnimationFrame(detect);
+        }
+        
+        function drawZones() {
+            if (!isDetecting) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            }
+            
+            zones.forEach((zone, idx) => {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(zone.x1, zone.y1, zone.x2 - zone.x1, zone.y2 - zone.y1);
+                ctx.fillStyle = '#00ff00';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText(`ZONE ${idx + 1}`, zone.x1 + 10, zone.y1 + 35);
+            });
+            
+            if (currentZone && currentZone.end) {
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(
+                    Math.min(currentZone.start.x, currentZone.end.x),
+                    Math.min(currentZone.start.y, currentZone.end.y),
+                    Math.abs(currentZone.end.x - currentZone.start.x),
+                    Math.abs(currentZone.end.y - currentZone.start.y)
+                );
+            }
+        }
+        
+        function decreaseSensitivity() {
+            minObjectSize += 500;
+            document.getElementById('sensitivityValue').textContent = `Size: ${minObjectSize}`;
+            updateStatus('↓ Less sensitive', 'warning');
+        }
+        
+        function increaseSensitivity() {
+            minObjectSize = Math.max(500, minObjectSize - 500);
+            document.getElementById('sensitivityValue').textContent = `Size: ${minObjectSize}`;
+            updateStatus('↑ More sensitive', 'warning');
+        }
+        
+        function sendChallan() {
+            const violations = window.currentViolations || [];
+            if (violations.length === 0) {
+                alert('No violations detected!');
+                return;
+            }
+            
+            const carId = `CAR-${Math.floor(Math.random() * 3) + 1}`;
+            const vehicleInfo = vehicleDatabase[carId];
+            
+            const challanText = `
+🚨 E-CHALLAN ISSUED 🚨
+━━━━━━━━━━━━━━━━━━━━━━
+📋 Challan ID: CH-${Date.now()}
+🚗 Vehicle: ${carId}
+👤 Owner: ${vehicleInfo.owner}
+📱 Phone: ${vehicleInfo.phone}
+
+⚠️ VIOLATION:
+${violations[0].reason}
+
+📅 Date: ${violations[0].timestamp}
+📍 Location: Parking Zone A
+
+💰 Fine Amount: Rs. 2,000/-
+
+⏰ Pay within 15 days to avoid
+   additional charges.
+
+━━━━━━━━━━━━━━━━━━━━━━
+This is an automated message
+from E-Challan System
+            `.trim();
+            
+            document.getElementById('challanMessage').textContent = challanText;
+            document.getElementById('challanPopup').style.display = 'block';
+        }
+        
+        function closePopup() {
+            document.getElementById('challanPopup').style.display = 'none';
+        }
+        
+        function updateStatus(message, type) {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+            statusBar.className = 'status-bar status-' + type;
+        }
+    </script>
+</body>
+</html>
